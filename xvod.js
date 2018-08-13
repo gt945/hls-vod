@@ -228,12 +228,15 @@ function handleWSMp4Request(file, offset, speed, socket){
 	if (file) {
 		file = path.join('/', file);
 		file = path.join(rootPath, file);
-
+		startWSTranscoding(file, offset, speed, info, socket);
 		var json = probeMediainfo(file);
 		try {
 			var info = JSON.parse(json);
+			var url = '/thumb/'
+				+ encodeURIComponent(Buffer.from(file).toString('base64'))
+				+ '/' ;
+			info['thumbnailurl'] = url;
 			socket.emit('mediainfo', info);
-			startWSTranscoding(file, offset, speed, info, socket);
 		} catch (err) {
 			console.log('[' + socket.id + '] ' + json);
 		}
@@ -297,6 +300,35 @@ function handleRawRequest(request, response) {
 	}
 }
 
+function decodeThumbnailFrame(response, file, offset) {
+	var startTime = convertSecToTime(offset);
+	
+	var args = [
+		'-ss', startTime,
+		'-i', file,
+		'-vf', 'scale=min(' + '360' + '\\, iw):-2', '-vframes', '1',
+		'-f', 'mjpeg', 'pipe:1'
+	];
+	var encoderChild = childProcess.spawn(transcoderPath, args, {env: process.env});
+	encoderChild.stdout.on('data', function(data) {
+		response.write(data);
+	});
+	
+	encoderChild.on('exit', function(code) {
+		response.end();
+	});
+}
+
+function handleThumbRequest(request, response) {
+	var requestPath = Buffer.from(decodeURIComponent(request.params[0]), 'base64').toString('utf8');
+	var offset = parseFloat(request.params[1]);
+	if (fs.existsSync(requestPath)) {
+		decodeThumbnailFrame(response, requestPath, offset);
+	} else {
+		response.writeHead(404);
+		response.end();
+	}
+}
 function xuiResponse(request, response, data) {
 	if (request.body.callback) {
 		var json = JSON.stringify(data);
@@ -692,6 +724,8 @@ function initExpress() {
 	app.use('/raw/', serveStatic(rootPath));
 	
 	app.use(/^\/raw2\/([^/]*)\/.*/, handleRawRequest);
+	
+	app.use(/^\/thumb\/([^/]*)\/(.*)/, handleThumbRequest);
 	
 	app.post('/xui', handleXUIRequest);
 

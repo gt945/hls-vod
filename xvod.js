@@ -13,7 +13,7 @@ var bodyParser = require('body-parser');
 var socketIo = require('socket.io');
 var srt2vtt = require('srt-to-vtt');
 var ass2vtt = require('ass-to-vtt');
-var dlnacasts = require('dlnacasts')()
+var dlnacasts = require('dlnacasts')({listenPort:3333})
 
 // Parameters
 var listenPort = 4040;
@@ -62,7 +62,7 @@ function startWSTranscoding(file, offset, speed, info, socket){
 		case 2:
 			atempo.push('atempo=2');
 			setpts = setpts / 2;
-			fps *= 2;
+			fps = 50;
 			break;
 		case 1:
 			break;
@@ -373,14 +373,22 @@ function xuiPlay(request, response) {
 		if (player.xml == request.body.player) {
 			var play = function() {
 				var opts = {
-					title : 'NodeCast'
+					title : encodeURIComponent(path.basename(file))
 				};
 				var subtitles = findSubtitles(file);
 				if (subtitles) {
-					subtitles = (isHttps ? 'https://' : 'http://') + request.headers.host + '/raw/' + encodeURIComponent(subtitles);
+					subtitles = (isHttps ? 'https://' : 'http://')
+					+ request.headers.host
+					+ '/raw/'
+					+ encodeURIComponent(subtitles);
 					opts.subtitles = [ subtitles ];
 				}
-				player.play((isHttps ? 'https://' : 'http://') + request.headers.host + '/raw2/' + encodeURIComponent(Buffer.from(file).toString('base64')) + '/' + encodeURIComponent(path.basename(file)), opts, function(){
+				var url = (isHttps ? 'https://' : 'http://')
+					+ request.headers.host
+					+ '/raw2/'
+					+ encodeURIComponent(Buffer.from(file).toString('base64'))
+					+ '/' + encodeURIComponent(path.basename(file));
+				player.play(url, opts, function(){
 					xuiResponse(request, response, {msg:"success"});
 				});
 			}

@@ -355,17 +355,23 @@ Class('App.SocketVod', 'xui.Com',{
 					if (vodurl=='') {
 						vodurl=window.location.href;
 					}
-					var rawUrl=vodurl+'raw2/'+encodeURIComponent(item.base64)+'/'+encodeURIComponent(item.caption);
-					var textArea=document.createElement("textarea");
-					textArea.value=rawUrl;
-					textArea.style.opacity='0';
-					document.body.appendChild(textArea);
-					textArea.select();
-					try {
-						document.execCommand('copy');
-					}catch(err) {
+					var rawUrl=vodurl+'raw2/'+encodeURIComponent(item.base64)+'/'+encodeURIComponent(item.value);
+					if (xui.browser.isIOS){
+						xui.ComFactory.newCom("App.Input",function(){
+							this.show();
+						},null,{caption:"原始文件",value:rawUrl}, {});
+					}else{
+						var textArea=document.createElement("textarea");
+						textArea.value=rawUrl;
+						textArea.style.opacity='0';
+						document.body.appendChild(textArea);
+						textArea.select();
+						try {
+							document.execCommand('copy');
+						}catch(err) {
+						}
+						document.body.removeChild(textArea);
 					}
-					document.body.removeChild(textArea);
 					break;
 				case "info":
 					var paras={

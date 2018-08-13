@@ -384,24 +384,22 @@ function xuiDiscovery(request, response) {
 	xuiResponse(request, response, {msg:"success",items:items});
 }
 
-function xuiList(request, response) {
-	var browsePath = path.join('/', request.body.path); // Remove ".." etc
+function listDir(reqPath, success, fail) {
+	var browsePath = path.join('/', reqPath); // Remove ".." etc
 	var fsBrowsePath = path.join(rootPath, browsePath);
-
 	var fileList = [];
 
-	if (browsePath != '/') {
+	if (fsBrowsePath != '/') {
 		fileList.push({
 			caption:"..",
 			type:"directory",
-			path: path.join('/', request.body.path + '/..')
+			path: path.join('/', reqPath + '/..')
 		});
-		
 	}
-
+	
 	fs.readdir(fsBrowsePath, function(err, files) {
 		if (err) {
-			xuiResponse(request, response, {msg:'fail'});
+			fail();
 			return;
 		}
 
@@ -410,6 +408,7 @@ function xuiList(request, response) {
 			var fsPath = path.join(fsBrowsePath, file);
 			stats = fs.lstatSync(fsPath);
 			fileObj.caption = file;
+			fileObj.value = file;
 			
 			if (stats.isFile()) {
 				var extName = path.extname(file).toLowerCase();
@@ -451,9 +450,43 @@ function xuiList(request, response) {
 		var data = {
 			msg : 'success',
 			cwd : browsePath,
-			list : fileList
+			list : fileList,
+			prev : null,
+			next : null,
+			caption : path.basename(fsBrowsePath)
 		}
-		xuiResponse(request, response, data);
+		success(data);
+		
+	});
+}
+
+function xuiList(request, response) {
+	var reqPath = request.body.path;
+	var parentPath = reqPath + '/..';
+	listDir(parentPath, function(pdata) {
+		listDir(reqPath, function(data) {
+			
+			if (data.cwd != pdata.cwd) {
+				var i;
+				for (i = 0; i < pdata.list.length; i++) {
+					if (pdata.list[i].caption == data.caption) {
+						if (pdata.list[i - 1] && pdata.list[i - 1].caption != '..') {
+							data.prev = pdata.list[i - 1].path;
+						}
+						
+						if (pdata.list[i + 1] && pdata.list[i + 1].type == 'directory') {
+							data.next = pdata.list[i + 1].path;
+						}
+						break;
+					}
+				}
+			}
+			xuiResponse(request, response, data);
+		}, function(){
+			xuiResponse(request, response, {msg:'fail'});
+		});
+	}, function(){
+		xuiResponse(request, response, {msg:'fail'});
 	});
 }
 

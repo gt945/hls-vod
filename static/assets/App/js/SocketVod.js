@@ -12,8 +12,10 @@ Class('App.SocketVod', 'xui.Com',{
 		// 实例的属性要在此函数中初始化，不要直接放在Instance下
 		initialize : function(){
 			var ns=this;
-			ns._cwd = '';
-			ns._player = '';
+			ns._cwd='';
+			ns._player='';
+			ns._prev=null;
+			ns._next=null;
 		},
 		// 初始化内部控件（通过界面编辑器生成的代码，大部分是界面控件）
 		// *** 如果您不是非常熟悉XUI框架，请慎重手工改变本函数的代码 ***
@@ -47,26 +49,26 @@ Class('App.SocketVod', 'xui.Com',{
 				.onItemSelected("_tree_itemselected")
 				.onContextmenu("_tree_contextmenu")
 			);
-			
+
 			host.dialog.append(
 				(new xui.UI.Block())
 				.setHost(host,"header")
 				.setDock("top")
 				.setHeight(30)
 				);
-			
+
 			host.header.append(
 				(new xui.UI.ToolBar())
-				.setHost(host,"toolbar")
+				.setHost(host,"toolbar1")
 				.setItems([{
-					"id" : "grp1",
+					"id" : "grp0",
 					"sub" : [
 					{
 						"id" : "delete",
 						"caption" : "删除当前目录",
 						"image" : "@xui_ini.appPath@image\/delete.png"
 					}],
-					"caption" : "grp1"
+					"caption" : "grp0"
 				},{
 					"id":"grp1",
 					"sub":[
@@ -81,7 +83,34 @@ Class('App.SocketVod', 'xui.Com',{
 					"id":"grp2",
 					"sub":[
 						{
-							"id":"filter",
+							"id":"prev",
+							"caption" : "上一个"
+						},{
+							"id":"next",
+							"caption" : "下一个"
+						}
+					]
+				}])
+				.onClick("_toolbar_onclick")
+				.setDisableHoverEffect(true)
+				.setHandler(false)
+				);
+
+			host.dialog.append(
+				(new xui.UI.Block())
+				.setHost(host,"footer")
+				.setDock("bottom")
+				.setHeight(30)
+			);
+
+			host.footer.append(
+				(new xui.UI.ToolBar())
+				.setHost(host,"toolbar2")
+				.setItems([{
+					"id":"grp1",
+					"sub":[
+						{
+							"id":"device",
 							object: new xui.UI.ComboInput()
 							.setHost(host,"device")
 							.setWidth(245)
@@ -98,13 +127,6 @@ Class('App.SocketVod', 'xui.Com',{
 				.setDisableHoverEffect(true)
 				.setHandler(false)
 				);
-			
-			host.dialog.append(
-				(new xui.UI.Block())
-				.setHost(host,"footer")
-				.setDock("bottom")
-				.setHeight(30)
-			);
 
 			return children;
 			// ]]Code created by CrossUI RAD Studio
@@ -133,7 +155,9 @@ Class('App.SocketVod', 'xui.Com',{
 				if (filter.hasfocus()){
 					filter.blur();
 				}else{
-					ns.dialog.close();
+					xui.confirm("确认","确认",function(){
+						ns.dialog.close();
+					});
 				}
 			});
 			xui.Event.keyboardHook("j",0,0,0,function(){
@@ -167,7 +191,7 @@ Class('App.SocketVod', 'xui.Com',{
 				tree.setTabindex(null);
 				tree.setUIValue(items[i].id);
 			});
-			
+
 			xui.Event.keyboardHook("enter",0,0,0,function(){
 				var value=ns.tree.getUIValue();
 				if(value&&!filter.hasfocus()){
@@ -178,7 +202,7 @@ Class('App.SocketVod', 'xui.Com',{
 				}
 				return false;
 			});
-			
+
 			xui.Event.keyboardHook("u",0,0,0,function(){
 				var tree=ns.tree;
 				var items=tree.getItems();
@@ -190,14 +214,14 @@ Class('App.SocketVod', 'xui.Com',{
 					tree.fireItemClickEvent(items[i].id);
 				}
 			});
-			
+
 			xui.Event.keyboardHook("c",0,0,0,function(){
 				var value=ns.tree.getUIValue();
 				if(value&&!filter.hasfocus()){
 					ns.tree.getSubNodeByItemId('BAR', value).onContextmenu();
 				}
 			});
-			
+
 			xui.Event.keyboardHook("/",0,0,0,function(){
 				xui(ns.filter).query('input').focus();
 				return false;
@@ -208,7 +232,14 @@ Class('App.SocketVod', 'xui.Com',{
 					this.show();
 				});
 			});
-			
+			xui.Event.keyboardHook("n",0,0,0,function(){
+				ns.toolbar1.fireItemClickEvent('next');
+			});
+			xui.Event.keyboardHook("p",0,0,0,function(){
+				ns.toolbar1.fireItemClickEvent('prev');
+			});
+
+
 			if(_.isDefined(ns.properties.path)){
 				ns.loadPath(ns.properties.path);
 			}else{
@@ -230,6 +261,8 @@ Class('App.SocketVod', 'xui.Com',{
 				if(rsp&&rsp.msg&&rsp.msg=='success'){
 					tree.setItems(rsp.list);
 					ns._cwd=rsp.cwd;
+					ns._prev=rsp.prev;
+					ns._next=rsp.next;
 				}
 				tree.free();
 			},function(){
@@ -311,7 +344,7 @@ Class('App.SocketVod', 'xui.Com',{
 								alert('删除失败');
 						tree.free();
 							}
-							
+
 					},function(){
 						tree.free();
 					},null,{method:'post'});
@@ -405,6 +438,16 @@ Class('App.SocketVod', 'xui.Com',{
 						},null,{method:'post'});
 					});
 					break;
+				case "prev":
+					if(ns._prev){
+						ns.loadPath(ns._prev);
+					}
+					break;
+				case "next":
+					if(ns._next){
+						ns.loadPath(ns._next);
+					}
+					break
 			}
 			ctrl.setTabindex(null);
 		},
@@ -458,7 +501,7 @@ Class('App.SocketVod', 'xui.Com',{
 			},function(){
 			},null,{method:'post'});
 		}
-	
+
 	},
 	Static:{
 		designViewConf:{

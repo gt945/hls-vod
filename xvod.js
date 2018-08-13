@@ -674,7 +674,18 @@ function initExpress() {
 			}
 		});
 	});
-
+	
+	dlnacasts.on('update', function(player){
+		player.on('error', function(err){
+			console.log(player.name + ' error ' + err);
+		});
+		player.on('status', function(status){
+			console.log(player.name + ' status ' + status.playerState);
+		});
+		player.on('loading', function(err){
+			console.log(player.name + ' loading ' + err);
+		});
+	});
 	server.listen(listenPort);
 }
 

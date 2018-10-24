@@ -3,6 +3,13 @@ live-vod
 
 Streaming and on-the-fly transcoding of any video file for Chrome, Firefox. etc.
 
+Features
+-----------
+- Support 4x,8x,16x playback speed(Need powerfull server)
+- Seek by gesture on touchable device
+- Auto probe subtitle file
+- Seek by thumbnails
+- Support PIP(If supported by browser)
 
 Requirements
 ------------

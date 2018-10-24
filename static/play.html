@@ -14,6 +14,7 @@
 	<link rel="stylesheet" href="mediaelement-plugins/dist/spacer/spacer.css">
 	<link rel="stylesheet" href="mediaelement-plugins/dist/toggle/toggle.css">
 	<link rel="stylesheet" href="mediaelement-plugins/dist/thumbnailseek/thumbnailseek.css">
+	<link rel="stylesheet" href="mediaelement-plugins/dist/pip/pip.css">
 
 	<script type="text/javascript" src="hammer.min.js"></script>
 
@@ -23,6 +24,7 @@
 	<script src="mediaelement-plugins/dist/spacer/spacer.js"></script>
 	<script src="mediaelement-plugins/dist/toggle/toggle.js"></script>
 	<script src="mediaelement-plugins/dist/thumbnailseek/thumbnailseek.js"></script>
+	<script src="mediaelement-plugins/dist/pip/pip.js"></script>
 	<script src="/socket.io/socket.io.js"></script>
 
 </head>
@@ -47,7 +49,7 @@
 				var ele = document.getElementById('player');
 				ele.src = param[1];
 				var player = new MediaElementPlayer('player', {
-					features: ['playpause', 'gesture', 'current', 'progress', 'duration', 'spacer', 'thumbnailseek', 'tracks', 'speed', 'volume', 'toggle', 'fullscreen'],
+					features: ['playpause', 'gesture', 'current', 'progress', 'duration', 'spacer', 'pip', 'thumbnailseek', 'tracks', 'speed', 'volume', 'toggle', 'fullscreen'],
 					renderers: ['vod'],
 					clickToPlayPause: false,
 					timeAndDurationSeparator: '<span> / </span>',

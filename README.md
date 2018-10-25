@@ -5,6 +5,8 @@ Streaming and on-the-fly transcoding of any video file for Chrome, Firefox. etc.
 
 Features
 -----------
+- Simple file management
+- Support DLNA, push your video file to DLNA renders
 - Support 4x,8x,16x playback speed(Need powerfull server)
 - Seek by gesture on touchable device
 - Auto probe subtitle file

@@ -34,7 +34,7 @@ Class('App.SocketVod', 'xui.Com',{
 				.setRestoreBtn(false)
 				.setOptBtn(true)
 				.setStatus("max")
-				.setCaption("浏览")
+				.setCaption("Files")
 				.beforeClose("_dialog_beforeclose")
 				.onShowOptions("_dialog_onshowoptions")
 			);
@@ -65,7 +65,8 @@ Class('App.SocketVod', 'xui.Com',{
 					"sub" : [
 					{
 						"id" : "delete",
-						"caption" : "删除当前目录",
+						"caption": "Delete",
+						"tips" : "Delete Current Directory",
 						"image" : "@xui_ini.appPath@image\/delete.png"
 					}],
 					"caption" : "grp0"
@@ -84,10 +85,12 @@ Class('App.SocketVod', 'xui.Com',{
 					"sub":[
 						{
 							"id":"prev",
-							"caption" : "上一个"
+							"caption" : "Prev",
+							"tips": "Prev Directory"
 						},{
 							"id":"next",
-							"caption" : "下一个"
+							"caption" : "Next",
+							"tips": "Next Directory"
 						}
 					]
 				}])
@@ -115,7 +118,7 @@ Class('App.SocketVod', 'xui.Com',{
 							.setHost(host,"device")
 							.setWidth(245)
 							.setLabelSize(60)
-							.setLabelCaption("设备：")
+							.setLabelCaption("Renders：")
 							.setType("listbox")
 							.setShowDirtyMark(false)
 							.beforePopShow("_device_beforepopshow")
@@ -155,7 +158,7 @@ Class('App.SocketVod', 'xui.Com',{
 				if (filter.hasfocus()){
 					filter.blur();
 				}else{
-					xui.confirm("确认","确认",function(){
+					xui.confirm("Confirm","OK",function(){
 						ns.dialog.close();
 					});
 				}
@@ -308,30 +311,30 @@ Class('App.SocketVod', 'xui.Com',{
 			}
 			items.push({
 				id:"del",
-				caption:"删除"
+				caption:"Delete"
 			});
 			
 			if(item.type!="directory"){
 				items.push({
 					id:"raw",
-					caption:"原始文件"
+					caption:"URL"
 				});
 			}
 			if(item.type=="video"){
 				items.push({
 					id:"info",
-					caption:"编码信息"
+					caption:"Info"
 				});
 				items.push({
 					id:"play",
-					caption:"播放"
+					caption:"DLNA"
 				});
 			}
 			context.setItems(items);
 			var callback=function(prf,i){
 				switch(i.id){
 				case "del":
-					xui.confirm("确认","删除\""+item.caption+"\"？",function(){
+					xui.confirm("Confirm","Delete \""+item.caption+"\"？",function(){
 					var paras={
 							action:"del",
 							path:item.path
@@ -341,7 +344,7 @@ Class('App.SocketVod', 'xui.Com',{
 							if(rsp&&rsp.msg&&rsp.msg=='success'){
 								ns.loadPath(ns._cwd);
 							}else{
-								alert('删除失败');
+								alert('Delete failed');
 						tree.free();
 							}
 
@@ -359,7 +362,7 @@ Class('App.SocketVod', 'xui.Com',{
 					if (xui.browser.isIOS){
 						xui.ComFactory.newCom("App.Input",function(){
 							this.show();
-						},null,{caption:"原始文件",value:rawUrl}, {});
+						},null,{caption:"URL",value:rawUrl}, {});
 					}else{
 						var textArea=document.createElement("textarea");
 						textArea.value=rawUrl;
@@ -426,7 +429,7 @@ Class('App.SocketVod', 'xui.Com',{
 			var ns = this,tree=ns.tree,ctrl=profile.boxing();
 			switch(item.id){
 				case "delete":
-					xui.confirm("确认","删除\""+ns._cwd+"\"？",function(){
+					xui.confirm("Confirm","Delete\""+ns._cwd+"\"？",function(){
 						var paras={
 							action:"del",
 							path:ns._cwd
@@ -436,7 +439,7 @@ Class('App.SocketVod', 'xui.Com',{
 							if(rsp&&rsp.msg&&rsp.msg=='success'){
 								ns.loadPath(ns._cwd+'/..');
 							}else{
-								alert('删除失败');
+								alert('Delete failed');
 								tree.free();
 							}
 						},function(){

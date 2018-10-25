@@ -12,7 +12,7 @@ Class('App.ImageView', 'xui.Com',{
 				(new xui.UI.Dialog())
 				.setHost(host,"dialog")
 				.setDock("cover")
-				.setCaption("图片")
+				.setCaption("Image")
 				.setMovable(false)
 				.setMinBtn(false)
 				.setStatus("max")

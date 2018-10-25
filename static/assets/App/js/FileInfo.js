@@ -10,7 +10,7 @@ Class('App.FileInfo', 'xui.Com',{
 				.setLeft(240)
 				.setTop(160)
 				.setResizer(false)
-				.setCaption("编码信息")
+				.setCaption("Codec Info")
 				.setMovable(false)
 				.setMinBtn(false)
 				.setMaxBtn(false)
@@ -49,7 +49,7 @@ Class('App.FileInfo', 'xui.Com',{
 				.setRows([{
 					"id" : "type",
 					"cells" : [{
-						"value" : "格式"
+						"value" : "Format"
 					},
 					{
 						"value" : ""
@@ -58,7 +58,7 @@ Class('App.FileInfo', 'xui.Com',{
 				{
 					"id" : "size",
 					"cells" : [{
-						"value" : "大小"
+						"value" : "Size"
 					},
 					{
 						"value" : ""
@@ -67,7 +67,7 @@ Class('App.FileInfo', 'xui.Com',{
 				{
 					"id" : "duration",
 					"cells" : [{
-						"value" : "时长"
+						"value" : "Duration"
 					},
 					{
 						"value" : ""
@@ -76,7 +76,7 @@ Class('App.FileInfo', 'xui.Com',{
 				{
 					"id" : "resolution",
 					"cells" : [{
-						"value" : "尺寸"
+						"value" : "Resolution"
 					},
 					{
 						"value" : ""
@@ -98,20 +98,20 @@ Class('App.FileInfo', 'xui.Com',{
 				.setColSortable(false)
 				.setHeader([{
 					"id" : "index",
-					"caption" : "流",
+					"caption" : "Stream",
 					"width" : 40,
 					"type" : "input",
 					"cellStyle" : "text-align:center"
 				},
 				{
 					"id" : "codec_name",
-					"caption" : "格式",
+					"caption" : "Codec",
 					"width" : 122,
 					"type" : "input"
 				},
 				{
 					"id" : "codec_type",
-					"caption" : "类型",
+					"caption" : "Type",
 					"width" : 122,
 					"type" : "input"
 				}])

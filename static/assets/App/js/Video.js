@@ -12,7 +12,7 @@ Class('App.Video', 'xui.Com',{
 				(new xui.UI.Dialog())
 				.setHost(host,"dialog")
 				.setDock("fill")
-				.setCaption("视频2")
+				.setCaption("Video")
 				.setMovable(false)
 				.setMinBtn(false)
 				.setMaxBtn(false)

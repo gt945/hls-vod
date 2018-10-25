@@ -14,7 +14,7 @@ Class('App.VideoSetting', 'xui.Com',{
 				.setHeight(180)
 				.setSelectable(false)
 				.setResizer(false)
-				.setCaption("播放设置")
+				.setCaption("Play Setting")
 				.setMovable(false)
 				.setMinBtn(false)
 				.setMaxBtn(false)
@@ -29,13 +29,9 @@ Class('App.VideoSetting', 'xui.Com',{
 				.setTop(30)
 				.setWidth(190)
 				.setLabelSize(60)
-				.setLabelCaption("宽度：")
+				.setLabelCaption("Width：")
 				.setType("listbox")
 				.setItems([{
-					"id" : "240",
-					"caption" : "240"
-				},
-				{
 					"id" : "320",
 					"caption" : "320"
 				},
@@ -44,16 +40,20 @@ Class('App.VideoSetting', 'xui.Com',{
 					"caption" : "480"
 				},
 				{
-					"id" : "640",
-					"caption" : "640"
+					"id" : "800",
+					"caption" : "800"
 				},
 				{
-					"id" : "720",
-					"caption" : "720"
+					"id" : "960",
+					"caption" : "960"
 				},
 				{
-					"id" : "1080",
-					"caption" : "1080"
+					"id" : "1280",
+					"caption" : "1280"
+				},
+				{
+					"id" : "1920",
+					"caption" : "1920"
 				}])
 				
 				);
@@ -65,7 +65,7 @@ Class('App.VideoSetting', 'xui.Com',{
 				.setTop(70)
 				.setWidth(190)
 				.setLabelSize(60)
-				.setLabelCaption("质量：")
+				.setLabelCaption("Quality：")
 				.setType("listbox")
 				.setItems([{
 					"id" : "18",
@@ -120,7 +120,7 @@ Class('App.VideoSetting', 'xui.Com',{
 				.setTop(115)
 				.setWidth(100)
 				.setHeight(22)
-				.setHtml("确定")
+				.setHtml("OK")
 				.onClick("_ok_onclick")
 				);
 			
@@ -131,7 +131,7 @@ Class('App.VideoSetting', 'xui.Com',{
 				.setTop(115)
 				.setWidth(100)
 				.setHeight(22)
-				.setHtml("取消")
+				.setHtml("Cancel")
 				.onClick("_cancel_onclick")
 				);
 			

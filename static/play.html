@@ -41,27 +41,41 @@
 				if (document.readyState=='complete') callback();
 			});
 		}
-		
+
+		function getQueryVariable(variable) {
+			var query = window.location.search.substring(1);
+			var vars = query.split('&');
+			for (var i = 0; i < vars.length; i++) {
+				var pair = vars[i].split('=');
+				if (decodeURIComponent(pair[0]) == variable) {
+					return pair[1];
+				}
+			}
+		}
+
 		ready(function(){
-			var url = window.location.href;
-			var param = url.split('?path=');
-			if (param.length == 2) {
+			var path = getQueryVariable('path');
+			var protocol = getQueryVariable('protocol');
+			if (path && protocol) {
 				var ele = document.getElementById('player');
-				ele.src = param[1];
+				ele.src = path+'.'+protocol;
 				var player = new MediaElementPlayer('player', {
 					features: ['playpause', 'gesture', 'current', 'progress', 'duration', 'spacer', 'pip', 'thumbnailseek', 'tracks', 'speed', 'volume', 'toggle', 'fullscreen'],
-					renderers: ['vod'],
+					renderers: ['vod', 'html5'],
 					clickToPlayPause: false,
 					timeAndDurationSeparator: '<span> / </span>',
 					success: function(mediaElement2, domObject, instance) {
 						while(ele.children.length) {
 							ele.removeChild(ele.firstElementChild);
 						}
+						domObject.thumbnail = function(sec) {
+							return '/thumb/' + path + '/' + sec;
+						}
 						const track = document.createElement('track');
 						track.kind = 'subtitles';
-						track.label = 'Default';
-						track.src = '/sub/' + param[1];
-						track.srclang = 'en';
+						track.label = 'Subtitle';
+						track.src = '/sub/' + path;
+						track.srclang = '';
 						ele.appendChild(track);
 						instance.rebuildtracks();
 						mediaElement2.play();

@@ -30,9 +30,10 @@ var key = null;
 var videoExtensions = ['.mp4','.3gp2','.3gp','.3gpp', '.3gp2','.amv','.asf','.avs','.dat','.dv', '.dvr-ms','.f4v','.m1v','.m2p','.m2ts','.m2v', '.m4v','.mkv','.mod','.mp4','.mpe','.mpeg1', '.mpeg2','.divx','.mpeg4','.mpv','.mts','.mxf', '.nsv','.ogg','.ogm','.mov','.qt','.rv','.tod', '.trp','.tp','.vob','.vro','.wmv','.web,', '.rmvb', '.rm','.ogv','.mpg', '.avi', '.mkv', '.wmv', '.asf', '.m4v', '.flv', '.mpg', '.mpeg', '.mov', '.vob', '.ts', '.webm', '.iso'];
 var audioExtensions = ['.mp3', '.aac', '.m4a'];
 var imageExtensions = ['.jpg', '.png', '.bmp', '.jpeg', '.gif'];
-var subtitleExtensions = ['.srt', '.ass'];
+var subtitleExtensions = ['.srt', '.ass', '.vtt'];
 var io = null;
 var isHttps = false;
+var tsDuration = 10;
 
 function convertSecToTime(sec){
 	var date = new Date(null);
@@ -221,21 +222,18 @@ function probeMediainfo(file) {
 }
 
 
-function handleWSMp4Request(file, offset, speed, socket){
+function handleWSMp4Request(requestPath, offset, speed, socket) {
+	var filePath = Buffer.from(decodeURIComponent(requestPath), 'base64').toString('utf8');
 	if (debug)
-		console.log('WS MP4 request: ' + file);
+		console.log('WS MP4 request: ' + requestPath);
 
-	if (file) {
-		file = path.join('/', file);
-		file = path.join(rootPath, file);
-		startWSTranscoding(file, offset, speed, info, socket);
-		var json = probeMediainfo(file);
+	if (filePath) {
+		filePath = path.join('/', filePath);
+		filePath = path.join(rootPath, filePath);
+		startWSTranscoding(filePath, offset, speed, info, socket);
+		var json = probeMediainfo(filePath);
 		try {
 			var info = JSON.parse(json);
-			var url = '/thumb/'
-				+ encodeURIComponent(Buffer.from(file).toString('base64'))
-				+ '/' ;
-			info['thumbnailurl'] = url;
 			socket.emit('mediainfo', info);
 		} catch (err) {
 			console.log('[' + socket.id + '] ' + json);
@@ -243,12 +241,104 @@ function handleWSMp4Request(file, offset, speed, socket){
 	}
 }
 
+function handleM3U8Request(request, response)
+{
+	var filePath = Buffer.from(decodeURIComponent(request.params[0]), 'base64').toString('utf8');
+	var fsPath = path.join(rootPath, filePath);
+	if (fs.existsSync(fsPath)) {
+		response.writeHead(200);
+		var json = probeMediainfo(fsPath);
+		try {
+			var info = JSON.parse(json);
+			if (info && info.format && info.format.duration) {
+				response.write('#EXTM3U\n');
+				response.write('#EXT-X-VERSION:3\n');
+				response.write('#EXT-X-MEDIA-SEQUENCE:0\n');
+				response.write('#EXT-X-ALLOW-CACHE:YES\n');
+				response.write('#EXT-X-PLAYLIST-TYPE:EVENT\n');
+				response.write('#EXT-X-TARGETDURATION: '+ tsDuration + '\n');
+				for ( var t = 0; t < info.format.duration; t += tsDuration) {
+					var currDuration = Math.min(tsDuration , info.format.duration - t);
+					response.write('#EXTINF:' + currDuration + '\n');
+					response.write( '/'+ request.params[0] + '.ts?start=' + t + '&duration=' + (currDuration - 0.01) +'\n');
+				}
+				response.write('#EXT-X-ENDLIST\n');
+			}
+		} catch (err) {
+			console.log('error');
+		}
+		response.end();
+	} else {
+		response.writeHead(404);
+		response.end();
+	}
+}
+
+function handleTsSegmentRequest(request, response)
+{
+	var filePath = Buffer.from(decodeURIComponent(request.params[0]), 'base64').toString('utf8');
+	var fsPath = path.join(rootPath, filePath);
+	if (fs.existsSync(fsPath) && request.query.start && request.query.duration) {
+		var startTime = convertSecToTime(request.query.start);
+		var durationTime = convertSecToTime(request.query.duration);
+		var fps = 30;
+		var args = [
+			'-ss', startTime, '-t', durationTime,
+			'-i', fsPath, '-sn', '-async', '0',
+			'-acodec', 'aac', '-b:a', audioBitrate + 'k', '-ar', '44100', '-ac', '2',
+			'-vf', 'scale=min(' + targetWidth + '\\, iw):-2', /*'-r', fps,*/
+			'-vcodec', 'libx264', '-profile:v', 'baseline', '-preset:v' ,'ultrafast', '-tune', 'zerolatency', '-crf', targetQuality, '-g', fps,
+			'-x264opts', 'level=3.0', '-pix_fmt', 'yuv420p',
+			'-threads', '0', '-v', '0', '-flags', '-global_header', /*'-map', '0', '-v', 'error',*/
+			'-f', 'mpegts', '-muxdelay', '0', 'pipe:1'
+		];
+
+		var encoderChild = childProcess.spawn(transcoderPath, args, {env: process.env});
+
+		console.log('Spawned encoder instance');
+		
+		if (debug) 
+			console.log(transcoderPath + ' ' + args.join(' '));
+
+		response.writeHead(200);
+		
+		if (debug) {
+			encoderChild.stderr.on('data', function(data) {
+				console.log(data.toString());
+			});
+		}
+		
+		encoderChild.stdout.on('data', function(data) {
+			response.write(data);
+		});
+		
+		encoderChild.on('exit', function(code) {
+			if (code == 0) {
+				console.log('Encoder completed');
+			}
+			else {
+				console.log('Encoder exited with code ' + code);
+			}
+			response.end();
+		});
+		
+		request.on('close', function() {
+			encoderChild.kill();
+			setTimeout(function() {
+				encoderChild.kill('SIGKILL');
+			}, 5000);
+		});
+	} else {
+		response.writeHead(404);
+		response.end();
+	}
+}
+
 function findSubtitles(filepath)
 {
 	var dir = path.dirname(filepath);
 	var videofile = path.basename(filepath).replace(/\.[^/.]+$/, '')+'.';
-	var relDir = path.join(rootPath, dir);
-	files = fs.readdirSync(relDir);
+	files = fs.readdirSync(dir);
 	for (i in files) {
 		var file = files[i];
 		var extName = path.extname(file).toLowerCase();
@@ -262,24 +352,31 @@ function findSubtitles(filepath)
 }
 
 function handleSubtitlesRequest(request, response) {
-	var file = path.join('/', decodeURIComponent(request.path));
+	var filePath = Buffer.from(decodeURIComponent(request.params[0]), 'base64').toString('utf8');
+	var fsPath = path.join(rootPath, filePath);
 	var find = false;
 	response.writeHead(200, {'Content-Type': 'text/vtt'});
-	var subtitle = findSubtitles(file);
-	if (subtitle) {
+	var subtitlePath = findSubtitles(fsPath);
+	if (subtitlePath) {
 		find = true;
-		var subtitlePath = path.join(rootPath, subtitle);
 		var ext = path.extname(subtitlePath);
-		if (ext == '.ass') {
-			fs.createReadStream(subtitlePath)
-			.pipe(ass2vtt())
-			.pipe(response);
-		} else if (ext =='.srt') {
-			fs.createReadStream(subtitlePath)
-			.pipe(srt2vtt())
-			.pipe(response);
-		} else {
-			console.log('Wrong Subtitles' + ext);
+		switch(ext) {
+			case '.ass':
+				fs.createReadStream(subtitlePath)
+				.pipe(ass2vtt())
+				.pipe(response);
+				break;
+			case '.srt':
+				fs.createReadStream(subtitlePath)
+				.pipe(srt2vtt())
+				.pipe(response);
+				break;
+			case '.vtt':
+				response.sendFile(subtitlePath);
+				break;
+			default:
+				console.log('Wrong Subtitles' + ext);
+				break;
 		}
 	}
 	if (!find) {
@@ -306,7 +403,7 @@ function decodeThumbnailFrame(response, file, offset) {
 	var args = [
 		'-ss', startTime,
 		'-i', file,
-		'-vf', 'scale=min(' + '360' + '\\, iw):-2', '-vframes', '1',
+		'-vf', 'scale=min(' + '480' + '\\, iw):-2', '-vframes', '1',
 		'-f', 'mjpeg', 'pipe:1'
 	];
 	var encoderChild = childProcess.spawn(transcoderPath, args, {env: process.env});
@@ -320,10 +417,11 @@ function decodeThumbnailFrame(response, file, offset) {
 }
 
 function handleThumbRequest(request, response) {
-	var requestPath = Buffer.from(decodeURIComponent(request.params[0]), 'base64').toString('utf8');
+	var filePath = Buffer.from(decodeURIComponent(request.params[0]), 'base64').toString('utf8');
+	var fsPath = path.join(rootPath, filePath);
 	var offset = parseFloat(request.params[1]);
-	if (fs.existsSync(requestPath)) {
-		decodeThumbnailFrame(response, requestPath, offset);
+	if (fs.existsSync(fsPath)) {
+		decodeThumbnailFrame(response, fsPath, offset);
 	} else {
 		response.writeHead(404);
 		response.end();
@@ -733,19 +831,23 @@ function initExpress() {
 	
 	app.use(/^\/raw2\/([^/]*)\/.*/, handleRawRequest);
 	
-	app.use(/^\/thumb\/([^/]*)\/(.*)/, handleThumbRequest);
+	app.use(/^\/thumb\/([^/]*)\/(.*)$/, handleThumbRequest);
+
+	app.get(/^\/(.+).m3u8$/, handleM3U8Request);
 	
+	app.get(/^\/(.+).ts$/, handleTsSegmentRequest);
+
 	app.post('/xui', handleXUIRequest);
 
-	app.use('/sub/', handleSubtitlesRequest);
+	app.use(/^\/sub\/(.*)$/, handleSubtitlesRequest);
 
 	io.on('connection', function (socket) {
 		socket.on('start', function (data) {
 			if (debug)
 				console.log(socket.id);
-			var match = /^(.+)/.exec(data.file);
+			var match = /^\/(.+)\.ws/.exec(data.file);
 			if (match) {
-				handleWSMp4Request(decodeURIComponent(match[1]), data.offset, data.speed, socket);
+				handleWSMp4Request(match[1], data.offset, data.speed, socket);
 			}
 		});
 	});

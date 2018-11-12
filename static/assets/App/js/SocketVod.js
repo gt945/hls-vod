@@ -290,11 +290,15 @@ Class('App.SocketVod', 'xui.Com',{
 					_.asyRun(f);
 					break;
 				case "video":
+					var protocol='ws';
+					if (xui.browser.isIOS){
+						protocol='m3u8';
+					}
 					var f=function(){
 						xui.ComFactory.newCom("App.Video",function(){
 							this.show();
 						},null,{
-							url:XVODURL+'play.html?path='+encodeURIComponent(item.path)
+							url:XVODURL+'play.html?path='+encodeURIComponent(item.base64)+'&protocol='+protocol
 						});
 					}
 					_.asyRun(f);
@@ -306,7 +310,7 @@ Class('App.SocketVod', 'xui.Com',{
 			var ns=this,tree=ns.tree;
 			var items=[];
 			var context=new xui.UI.PopMenu();
-			if(item.caption==".."){
+			if(!item||!item.caption||item.caption==".."){
 				return false;
 			}
 			items.push({
@@ -335,22 +339,22 @@ Class('App.SocketVod', 'xui.Com',{
 				switch(i.id){
 				case "del":
 					xui.confirm("Confirm","Delete \""+item.caption+"\"？",function(){
-					var paras={
+						var paras={
 							action:"del",
 							path:item.path
-					}
-					tree.busy();
+						}
+						tree.busy();
 						xui.request(XVODURL+"xui", paras, function(rsp){
 							if(rsp&&rsp.msg&&rsp.msg=='success'){
 								ns.loadPath(ns._cwd);
 							}else{
 								alert('Delete failed');
-						tree.free();
+								tree.free();
 							}
 
-					},function(){
-						tree.free();
-					},null,{method:'post'});
+						},function(){
+							tree.free();
+						},null,{method:'post'});
 					});
 					break;
 				case "raw":
@@ -417,7 +421,7 @@ Class('App.SocketVod', 'xui.Com',{
 			return false;
 		},
 		_dialog_beforeclose:function(profile){
-			var ns = this, uictrl = profile.boxing();
+			var ns=this, uictrl=profile.boxing();
 			xui.publish('goback');
 		},
 		_dialog_onshowoptions:function(){
@@ -426,7 +430,7 @@ Class('App.SocketVod', 'xui.Com',{
 			});
 		},
 		_toolbar_onclick:function(profile, item, group, e, src){
-			var ns = this,tree=ns.tree,ctrl=profile.boxing();
+			var ns=this,tree=ns.tree,ctrl=profile.boxing();
 			switch(item.id){
 				case "delete":
 					xui.confirm("Confirm","Delete\""+ns._cwd+"\"？",function(){
@@ -479,7 +483,7 @@ Class('App.SocketVod', 'xui.Com',{
 			}
 		},
 		_device_beforepopshow:function(profile,popCtl){
-			var ns=this, uictrl=profile.boxing(),elem = popCtl.boxing();
+			var ns=this, uictrl=profile.boxing(),elem=popCtl.boxing();
 			var paras={
 				action:"discovery"
 			}

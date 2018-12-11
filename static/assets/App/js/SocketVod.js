@@ -158,9 +158,13 @@ Class('App.SocketVod', 'xui.Com',{
 				if (filter.hasfocus()){
 					filter.blur();
 				}else{
-					xui.confirm("Confirm","OK",function(){
-						ns.dialog.close();
-					});
+					if(ns._cwd=='/'){
+						xui.confirm("Confirm","OK",function(){
+							ns.dialog.close();
+						});
+					}else{
+						ns.loadPath(ns._cwd+'/..');
+					}
 				}
 			});
 			xui.Event.keyboardHook("j",0,0,0,function(){

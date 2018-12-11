@@ -1,6 +1,6 @@
 {
-  "name": "hls-vod",
-  "version": "0.2.0",
+  "name": "xvod",
+  "version": "1.0.0",
   "dependencies": {
     "ass-to-vtt": "^1.2.0",
     "body-parser": "^1.18.2",

@@ -255,12 +255,12 @@ function handleM3U8Request(request, response)
 				response.write('#EXT-X-VERSION:3\n');
 				response.write('#EXT-X-MEDIA-SEQUENCE:0\n');
 				response.write('#EXT-X-ALLOW-CACHE:YES\n');
-				response.write('#EXT-X-PLAYLIST-TYPE:EVENT\n');
+				response.write('#EXT-X-PLAYLIST-TYPE:VOD\n');
 				response.write('#EXT-X-TARGETDURATION: '+ tsDuration + '\n');
 				for ( var t = 0; t < info.format.duration; t += tsDuration) {
 					var currDuration = Math.min(tsDuration , info.format.duration - t);
 					response.write('#EXTINF:' + currDuration + '\n');
-					response.write( '/'+ request.params[0] + '.ts?start=' + t + '&duration=' + (currDuration - 0.01) +'\n');
+					response.write( '/'+ request.params[0] + '.ts?start=' + t + '&duration=' + currDuration +'\n');
 				}
 				response.write('#EXT-X-ENDLIST\n');
 			}
@@ -397,7 +397,7 @@ function handleRawRequest(request, response) {
 	}
 }
 
-function decodeThumbnailFrame(response, file, offset) {
+function decodeThumbnailFrame(request, response, file, offset) {
 	var startTime = convertSecToTime(offset);
 	
 	var args = [
@@ -410,9 +410,23 @@ function decodeThumbnailFrame(response, file, offset) {
 	encoderChild.stdout.on('data', function(data) {
 		response.write(data);
 	});
-	
 	encoderChild.on('exit', function(code) {
 		response.end();
+	});
+	response.on('error', function(){
+		console.log('response error');
+		encoderChild.kill();
+		setTimeout(function() {
+			encoderChild.kill('SIGKILL');
+		}, 5000);
+	})
+
+	request.on('close', function() {
+		console.log('request close');
+		encoderChild.kill();
+		setTimeout(function() {
+			encoderChild.kill('SIGKILL');
+		}, 5000);
 	});
 }
 
@@ -421,7 +435,7 @@ function handleThumbRequest(request, response) {
 	var fsPath = path.join(rootPath, filePath);
 	var offset = parseFloat(request.params[1]);
 	if (fs.existsSync(fsPath)) {
-		decodeThumbnailFrame(response, fsPath, offset);
+		decodeThumbnailFrame(request, response, fsPath, offset);
 	} else {
 		response.writeHead(404);
 		response.end();

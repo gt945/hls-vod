@@ -1,4 +1,4 @@
-live-vod
+xvod
 =======
 
 Streaming and on-the-fly transcoding of any video file for Chrome, Firefox. etc.

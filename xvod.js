@@ -193,8 +193,8 @@ function startWSTranscoding(file, offset, speed, info, socket){
 		check_ack();
 	});
 
-	socket.on('disconnect', function(){
-		console.log('[' + socket.id + '] Disconnect');
+	socket.on('disconnect', function(reason){
+		console.log('[' + socket.id + '] Disconnect, ' + reason);
 		quit();
 	});
 

@@ -97,6 +97,7 @@ function startWSTranscoding(file, offset, speed, info, socket){
 	var seq = 0;
 	var ack = 0;
 	var pause = false;
+	var queue = [];
 	var args = [
 		'-ss', startTime,
 		'-i', file, '-sn', '-async', '0',
@@ -144,11 +145,16 @@ function startWSTranscoding(file, offset, speed, info, socket){
 	}
 	
 	var check_ack = function(){
-		var wait = seq - ack > 100 ? true : false;
+		var wait = seq - ack > 2048 ? true : false;
 		if (wait && !pause) {
 			stop();
-		} else if (!wait && pause) {
-			start();
+		} else if (!wait) {
+			if (pause) {
+				start();
+			}
+			if (queue.length) {
+				socket.emit('data', queue.shift());
+			}
 		}
 	}
 
@@ -175,7 +181,8 @@ function startWSTranscoding(file, offset, speed, info, socket){
 	});
 	
 	encoderChild.stdout.on('data', function(data) {
-		socket.emit('data', {seq : seq++, buffer : data});
+		queue.push({seq : seq++, buffer : data});
+		//socket.emit('data', {seq : seq++, buffer : data});
 		check_ack();
 	});
 	

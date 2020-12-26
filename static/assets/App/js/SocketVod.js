@@ -264,6 +264,7 @@ Class('App.SocketVod', 'xui.Com',{
 				path:path
 			}
 			tree.busy();
+			ns.filter.setUIValue("");
 			xui.request(XVODURL+"xui", paras, function(rsp){
 				if(rsp&&rsp.msg&&rsp.msg=='success'){
 					tree.setItems(rsp.list);
@@ -478,7 +479,7 @@ Class('App.SocketVod', 'xui.Com',{
 				var items=tree.getItems();
 				var reg=new RegExp(uictrl.getUIValue(),'i');
 				_.arr.each(items,function(item){
-					if (!reg.test(item.caption)){
+					if (!reg.test(item.caption)&&item.caption!=".."){
 						tree.updateItem(item.id, {hidden:true})
 					}else{
 						tree.updateItem(item.id, {hidden:false})

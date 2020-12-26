@@ -68,6 +68,18 @@ Class('App.VideoSetting', 'xui.Com',{
 				.setLabelCaption("Quality：")
 				.setType("listbox")
 				.setItems([{
+					"id" : "15",
+					"caption" : "15"
+				},
+				{
+					"id" : "16",
+					"caption" : "16"
+				},
+				{
+					"id" : "17",
+					"caption" : "17"
+				},
+				{
 					"id" : "18",
 					"caption" : "18"
 				},

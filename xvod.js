@@ -23,6 +23,7 @@ var targetQuality = 23
 var searchPaths = [];
 var rootPath = null;
 var transcoderPath = 'ffmpeg';
+var thumbnailerPath = 'ffmpegthumbnailer';
 var probePath = 'ffprobe';
 var debug = false;
 var cert = null;
@@ -77,7 +78,7 @@ function startWSTranscoding(file, offset, speed, info, socket){
 		default:
 			break;
 	}
-	
+
 	switch(targetWidth) {
 	case 240:
 		audioBitrate = 32;
@@ -104,15 +105,15 @@ function startWSTranscoding(file, offset, speed, info, socket){
 		'-af', atempo_opt,
 		'-acodec', 'aac', '-b:a', audioBitrate + 'k', '-ar', '44100', '-ac', '2',
 		'-vf', 'scale=min(' + targetWidth + '\\, iw):-2,setpts=' + setpts_opt + '*PTS', '-r',  fps,
-		'-vcodec', 'libx264', '-profile:v', 'baseline', '-preset:v', 'ultrafast', '-tune', 'zerolatency', '-crf', targetQuality, '-g', gop,
+		'-vcodec', 'libx264', '-profile:v', 'high', '-preset:v', 'veryfast', '-tune', 'zerolatency', '-crf', targetQuality, '-g', gop,
 		'-x264opts', 'level=3.0', '-pix_fmt', 'yuv420p',
-		'-threads', '0', '-flags', '+global_header', '-v', '0', /* '-map', '0', '-v', 'error',*/
+		'-threads', '0', '-flags', '+global_header', /*'-v', 'error', '-map', '0',*/
 		'-f', 'mp4', '-reset_timestamps', '1', '-movflags', 'empty_moov+frag_keyframe+default_base_moof', 'pipe:1'
 	];
 	var encoderChild = childProcess.spawn(transcoderPath, args, {env: process.env});
 
 	console.log('[' + socket.id + '] Spawned encoder instance');
-	
+
 	if (debug)
 		console.log(transcoderPath + ' ' + args.join(' '));
 
@@ -143,7 +144,7 @@ function startWSTranscoding(file, offset, speed, info, socket){
 			encoderChild.kill('SIGKILL');
 		}, 5000);
 	}
-	
+
 	var check_ack = function(){
 		var wait = seq - ack > 2048 ? true : false;
 		if (wait && !pause) {
@@ -179,13 +180,13 @@ function startWSTranscoding(file, offset, speed, info, socket){
 			console.log(data.toString());
 		}
 	});
-	
+
 	encoderChild.stdout.on('data', function(data) {
 		queue.push({seq : seq++, buffer : data});
 		//socket.emit('data', {seq : seq++, buffer : data});
 		check_ack();
 	});
-	
+
 	encoderChild.on('exit', function(code) {
 		if (code == 0) {
 			socket.emit('eos');
@@ -213,7 +214,7 @@ function startWSTranscoding(file, offset, speed, info, socket){
 	socket.on('pause', function(){
 		stop();
 	});
-	
+
 	socket.on('continue', function(){
 		start();
 	});
@@ -293,8 +294,8 @@ function handleTsSegmentRequest(request, response)
 			'-ss', startTime, '-t', durationTime,
 			'-i', fsPath, '-sn', '-async', '0',
 			'-acodec', 'aac', '-b:a', audioBitrate + 'k', '-ar', '44100', '-ac', '2',
-			'-vf', 'scale=min(' + targetWidth + '\\, iw):-2', /*'-r', fps,*/
-			'-vcodec', 'libx264', '-profile:v', 'baseline', '-preset:v' ,'ultrafast', '-tune', 'zerolatency', '-crf', targetQuality, '-g', fps,
+			'-vf', 'scale=min(' + targetWidth + '\\, iw):-2', '-r', fps,
+			'-vcodec', 'libx264', '-profile:v', 'baseline', '-preset:v' ,'veryfast', '-tune', 'zerolatency', '-crf', targetQuality, '-g', fps,
 			'-x264opts', 'level=3.0', '-pix_fmt', 'yuv420p',
 			'-threads', '0', '-v', '0', '-flags', '-global_header', /*'-map', '0', '-v', 'error',*/
 			'-f', 'mpegts', '-muxdelay', '0', 'pipe:1'
@@ -303,22 +304,22 @@ function handleTsSegmentRequest(request, response)
 		var encoderChild = childProcess.spawn(transcoderPath, args, {env: process.env});
 
 		console.log('Spawned encoder instance');
-		
-		if (debug) 
+
+		if (debug)
 			console.log(transcoderPath + ' ' + args.join(' '));
 
 		response.writeHead(200);
-		
+
 		if (debug) {
 			encoderChild.stderr.on('data', function(data) {
 				console.log(data.toString());
 			});
 		}
-		
+
 		encoderChild.stdout.on('data', function(data) {
 			response.write(data);
 		});
-		
+
 		encoderChild.on('exit', function(code) {
 			if (code == 0) {
 				console.log('Encoder completed');
@@ -328,7 +329,7 @@ function handleTsSegmentRequest(request, response)
 			}
 			response.end();
 		});
-		
+
 		request.on('close', function() {
 			encoderChild.kill();
 			setTimeout(function() {
@@ -404,9 +405,9 @@ function handleRawRequest(request, response) {
 	}
 }
 
-function decodeThumbnailFrame(request, response, file, offset) {
+function decodeThumbnailFrame2(request, response, file, offset) {
 	var startTime = convertSecToTime(offset);
-	
+
 	var args = [
 		'-ss', startTime,
 		'-i', file,
@@ -414,6 +415,40 @@ function decodeThumbnailFrame(request, response, file, offset) {
 		'-f', 'mjpeg', 'pipe:1'
 	];
 	var encoderChild = childProcess.spawn(transcoderPath, args, {env: process.env});
+	encoderChild.stdout.on('data', function(data) {
+		response.write(data);
+	});
+	encoderChild.on('exit', function(code) {
+		response.end();
+	});
+	response.on('error', function(){
+		console.log('response error');
+		encoderChild.kill();
+		setTimeout(function() {
+			encoderChild.kill('SIGKILL');
+		}, 5000);
+	})
+
+	request.on('close', function() {
+		console.log('request close');
+		encoderChild.kill();
+		setTimeout(function() {
+			encoderChild.kill('SIGKILL');
+		}, 5000);
+	});
+}
+
+function decodeThumbnailFrame(request, response, file, offset) {
+	var startTime = convertSecToTime(offset);
+
+	var args = [
+		'-t', startTime,
+		'-i', file,
+		'-s', '240',
+		'-c', 'jpg',
+		'-o', '-'
+	];
+	var encoderChild = childProcess.spawn(thumbnailerPath, args, {env: process.env});
 	encoderChild.stdout.on('data', function(data) {
 		response.write(data);
 	});
@@ -447,6 +482,60 @@ function handleThumbRequest(request, response) {
 		response.writeHead(404);
 		response.end();
 	}
+}
+
+function cutVideo(request, response, fsPath, start, stop) {
+	var fname = path.basename(fsPath);
+	var dname = path.dirname(fsPath);
+	var tname = path.parse(fname).name + '_cutter_' + start + '_' + stop + path.parse(fname).ext;
+	var output = path.join(dname, tname);
+	console.log(dname);
+	var args = [
+		'-ss', start,
+		'-i', fsPath,
+		'-to', stop,
+		'-c', 'copy',
+		output
+	];
+	var encoderChild = childProcess.spawn(transcoderPath, args, {env: process.env});
+	encoderChild.stderr.on('data', function(data){
+		console.log(data.toString());
+	});
+	encoderChild.stdout.on('data', function(data) {
+		response.write(data);
+	});
+	encoderChild.on('exit', function(code) {
+		response.end();
+	});
+	response.on('error', function(){
+		console.log('response error');
+		encoderChild.kill();
+		setTimeout(function() {
+			encoderChild.kill('SIGKILL');
+		}, 5000);
+	})
+
+	request.on('close', function() {
+		console.log('request close');
+		encoderChild.kill();
+		setTimeout(function() {
+			encoderChild.kill('SIGKILL');
+		}, 5000);
+	});
+}
+
+function handleCutterRequest(request, response) {
+	var filePath = Buffer.from(decodeURIComponent(request.params[0]), 'base64').toString('utf8');
+	var fsPath = path.join(rootPath, filePath);
+	var start = request.params[1];
+	var stop = request.params[2];
+	if (fs.existsSync(fsPath)) {
+		cutVideo(request, response, fsPath, start, stop)
+	} else {
+		response.writeHead(404);
+		response.end();
+	}
+
 }
 function xuiResponse(request, response, data) {
 	if (request.body.callback) {
@@ -511,7 +600,7 @@ function xuiPlay(request, response) {
 					xuiResponse(request, response, {msg:"success"});
 				});
 			}
-			
+
 			if (player.client) {
 				player.stop(play);
 			} else {
@@ -524,7 +613,7 @@ function xuiPlay(request, response) {
 	if (!find) {
 		xuiResponse(request, response, {msg:"fail"});
 	}
-	
+
 }
 
 function xuiDiscovery(request, response) {
@@ -539,7 +628,7 @@ function xuiDiscovery(request, response) {
 			xml: player.xml
 		});
 	}
-	
+
 	xuiResponse(request, response, {msg:"success",items:items});
 }
 
@@ -555,7 +644,7 @@ function listDir(reqPath, success, fail) {
 			path: path.join('/', reqPath + '/..')
 		});
 	}
-	
+
 	fs.readdir(fsBrowsePath, function(err, files) {
 		if (err) {
 			fail();
@@ -568,7 +657,7 @@ function listDir(reqPath, success, fail) {
 			stats = fs.lstatSync(fsPath);
 			fileObj.caption = file;
 			fileObj.value = file;
-			
+
 			if (stats.isFile()) {
 				var extName = path.extname(file).toLowerCase();
 				if (videoExtensions.indexOf(extName) != -1) {
@@ -615,7 +704,7 @@ function listDir(reqPath, success, fail) {
 			caption : path.basename(fsBrowsePath)
 		}
 		success(data);
-		
+
 	});
 }
 
@@ -624,7 +713,7 @@ function xuiList(request, response) {
 	var parentPath = reqPath + '/..';
 	listDir(parentPath, function(pdata) {
 		listDir(reqPath, function(data) {
-			
+
 			if (data.cwd != pdata.cwd) {
 				var i;
 				for (i = 0; i < pdata.list.length; i++) {
@@ -632,7 +721,7 @@ function xuiList(request, response) {
 						if (pdata.list[i - 1] && pdata.list[i - 1].caption != '..') {
 							data.prev = pdata.list[i - 1].path;
 						}
-						
+
 						if (pdata.list[i + 1] && pdata.list[i + 1].type == 'directory') {
 							data.next = pdata.list[i + 1].path;
 						}
@@ -652,7 +741,7 @@ function xuiList(request, response) {
 function xuiDel(request, response) {
 	var file = path.join('/', request.body.path);
 	var fsPath = path.join(rootPath, file);
-	
+
 	if (fs.existsSync(fsPath)) {
 		stats = fs.lstatSync(fsPath);
 		if (stats.isFile()) {
@@ -665,7 +754,7 @@ function xuiDel(request, response) {
 					candel = false;
 				}
 			});
-			
+
 			if (candel) {
 				fs.readdirSync(fsPath).forEach(function(f,index){
 					fs.unlinkSync(path.join(fsPath, f));
@@ -739,7 +828,7 @@ function handleXUIRequest(request, response) {
 			response.end();
 			break;
 	}
-	
+
 }
 
 function init() {
@@ -801,7 +890,7 @@ function init() {
 			}
 			key = process.argv[++i];
 			break;
-			
+
 			case '--debug':
 				debug = true;
 			break;
@@ -812,7 +901,7 @@ function init() {
 			break;
 		}
 	}
-	
+
 	console.log(rootPath + ' ' + searchPaths);
 
 	if (!rootPath) {
@@ -836,7 +925,7 @@ function initExpress() {
 	} else {
 		server = http.createServer(app);
 	}
-	
+
 	io = socketIo(server);
 
 	app.use(bodyParser.urlencoded({extended: false}));
@@ -847,15 +936,17 @@ function initExpress() {
 	});
 
 	app.use('/', serveStatic(__dirname + '/static'));
-	
+
 	app.use('/raw/', serveStatic(rootPath));
-	
+
 	app.use(/^\/raw2\/([^/]*)\/.*/, handleRawRequest);
-	
+
 	app.use(/^\/thumb\/([^/]*)\/(.*)$/, handleThumbRequest);
 
+	app.use(/^\/cutter\/([^/]*)\/([^/]*)\/(.*)$/, handleCutterRequest);
+
 	app.get(/^\/(.+).m3u8$/, handleM3U8Request);
-	
+
 	app.get(/^\/(.+).ts$/, handleTsSegmentRequest);
 
 	app.post('/xui', handleXUIRequest);
@@ -872,7 +963,7 @@ function initExpress() {
 			}
 		});
 	});
-	
+
 	dlnacasts.on('update', function(player){
 		player.on('error', function(err){
 			console.log(player.name + ' error ' + err);

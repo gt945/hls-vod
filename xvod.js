@@ -405,7 +405,7 @@ function handleRawRequest(request, response) {
 	}
 }
 
-function decodeThumbnailFrame2(request, response, file, offset) {
+function decodeThumbnailFrame(request, response, file, offset) {
 	var startTime = convertSecToTime(offset);
 
 	var args = [
@@ -438,7 +438,7 @@ function decodeThumbnailFrame2(request, response, file, offset) {
 	});
 }
 
-function decodeThumbnailFrame(request, response, file, offset) {
+function decodeThumbnailFrame2(request, response, file, offset) {
 	var startTime = convertSecToTime(offset);
 
 	var args = [
@@ -489,39 +489,37 @@ function cutVideo(request, response, fsPath, start, stop) {
 	var dname = path.dirname(fsPath);
 	var tname = path.parse(fname).name + '_cutter_' + start + '_' + stop + path.parse(fname).ext;
 	var output = path.join(dname, tname);
-	console.log(dname);
-	var args = [
-		'-ss', start,
-		'-i', fsPath,
-		'-to', stop,
-		'-c', 'copy',
-		output
-	];
-	var encoderChild = childProcess.spawn(transcoderPath, args, {env: process.env});
-	encoderChild.stderr.on('data', function(data){
-		console.log(data.toString());
-	});
-	encoderChild.stdout.on('data', function(data) {
-		response.write(data);
-	});
-	encoderChild.on('exit', function(code) {
+	if (!fs.existsSync(output)) {
+		var args = [
+			'-ss', start,
+			'-i', fsPath,
+			'-to', stop,
+			'-c', 'copy',
+			output
+		];
+		var encoderChild = childProcess.spawn(transcoderPath, args, {env: process.env});
+		encoderChild.stderr.on('data', function(data){
+			console.log(data.toString());
+		});
+		encoderChild.stdout.on('data', function(data) {
+			//response.write(data);
+		});
+		encoderChild.on('exit', function(code) {
+			response.writeHead(200);
+			response.end();
+		});
+		response.on('error', function(){
+			console.log('response error');
+			encoderChild.kill();
+			setTimeout(function() {
+				encoderChild.kill('SIGKILL');
+			}, 5000);
+		})
+	} else {
+		response.writeHead(400);
 		response.end();
-	});
-	response.on('error', function(){
-		console.log('response error');
-		encoderChild.kill();
-		setTimeout(function() {
-			encoderChild.kill('SIGKILL');
-		}, 5000);
-	})
+	}
 
-	request.on('close', function() {
-		console.log('request close');
-		encoderChild.kill();
-		setTimeout(function() {
-			encoderChild.kill('SIGKILL');
-		}, 5000);
-	});
 }
 
 function handleCutterRequest(request, response) {

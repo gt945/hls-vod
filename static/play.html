@@ -1,111 +1,96 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-  <meta content="text/html; charset=utf-8"
-        http-equiv="Content-Type">
-  <title></title>
-  <meta content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no"
-        name="viewport">
-  <meta content="black"
-        name="apple-mobile-web-app-status-bar-style">
-  <meta content="telephone=no"
-        name="format-detection">
-  <meta content="yes"
-        name="apple-mobile-web-app-capable">
-  <link href="mediaelement/build/mediaelementplayer.css"
-        rel="stylesheet">
-  <link href="mediaelement-plugins/dist/speed/speed.css"
-        rel="stylesheet">
-  <link href="mediaelement-plugins/dist/gesture/gesture.css"
-        rel="stylesheet">
-  <link href="mediaelement-plugins/dist/spacer/spacer.css"
-        rel="stylesheet">
-  <link href="mediaelement-plugins/dist/toggle/toggle.css"
-        rel="stylesheet">
-  <link href="mediaelement-plugins/dist/thumbnailseek/thumbnailseek.css"
-        rel="stylesheet">
-  <link href="mediaelement-plugins/dist/pip/pip.css"
-        rel="stylesheet">
-  <link href="mediaelement-plugins/dist/cutter/cutter.css"
-        rel="stylesheet">
-  <script src="hammer.min.js"
-        type="text/javascript"></script>
-  <script src="mediaelement/build/mediaelement-and-player.js"></script>
-  <script src="mediaelement-plugins/dist/speed/speed.js"></script>
-  <script src="mediaelement-plugins/dist/gesture/gesture.js"></script>
-  <script src="mediaelement-plugins/dist/spacer/spacer.js"></script>
-  <script src="mediaelement-plugins/dist/toggle/toggle.js"></script>
-  <script src="mediaelement-plugins/dist/thumbnailseek/thumbnailseek.js"></script>
-  <script src="mediaelement-plugins/dist/pip/pip.js"></script>
-  <script src="mediaelement-plugins/dist/cutter/cutter.js"></script>
-  <script src="/socket.io/socket.io.js"></script>
+      <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+      <title></title>
+      <meta content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no"
+            name="viewport">
+      <meta content="black" name="apple-mobile-web-app-status-bar-style">
+      <meta content="telephone=no" name="format-detection">
+      <meta content="yes" name="apple-mobile-web-app-capable">
+      <link href="mediaelement/build/mediaelementplayer.css" rel="stylesheet">
+      <link href="mediaelement-plugins/dist/speed/speed.css" rel="stylesheet">
+      <link href="mediaelement-plugins/dist/gesture/gesture.css" rel="stylesheet">
+      <link href="mediaelement-plugins/dist/spacer/spacer.css" rel="stylesheet">
+      <link href="mediaelement-plugins/dist/toggle/toggle.css" rel="stylesheet">
+      <link href="mediaelement-plugins/dist/thumbnailseek/thumbnailseek.css" rel="stylesheet">
+      <link href="mediaelement-plugins/dist/pip/pip.css" rel="stylesheet">
+      <link href="mediaelement-plugins/dist/cutter/cutter.css" rel="stylesheet">
+      <script src="hammer.min.js" type="text/javascript"></script>
+      <script src="mediaelement/build/mediaelement-and-player.js"></script>
+      <script src="mediaelement-plugins/dist/speed/speed.js"></script>
+      <script src="mediaelement-plugins/dist/gesture/gesture.js"></script>
+      <script src="mediaelement-plugins/dist/spacer/spacer.js"></script>
+      <script src="mediaelement-plugins/dist/toggle/toggle.js"></script>
+      <script src="mediaelement-plugins/dist/thumbnailseek/thumbnailseek.js"></script>
+      <script src="mediaelement-plugins/dist/pip/pip.js"></script>
+      <script src="mediaelement-plugins/dist/cutter/cutter.js"></script>
+      <script src="/socket.io/socket.io.js"></script>
 </head>
+
 <body style="margin: 0px;">
-  <video autoplay=""
-        id="player"
-        style="width:100%;height:100%;"
-        tabindex="0">
-  <track kind="subtitles"
-         src=""
-         srclang="en"></video>
-  <script type="text/javascript">
+      <video autoplay="" id="player" style="width:100%;height:100%;" tabindex="0">
+            <track kind="subtitles" src="" srclang="en"></video>
+      <script type="text/javascript">
 
 
-                function ready(callback){
-                        if (document.readyState!='loading') callback();
-                        else if (document.addEventListener) document.addEventListener('DOMContentLoaded', callback);
-                        else document.attachEvent('onreadystatechange', function(){
-                                    if (document.readyState=='complete') callback();
+            function ready(callback) {
+                  if (document.readyState != 'loading') callback();
+                  else if (document.addEventListener) document.addEventListener('DOMContentLoaded', callback);
+                  else document.attachEvent('onreadystatechange', function () {
+                        if (document.readyState == 'complete') callback();
+                  });
+            }
+
+            function getQueryVariable(variable) {
+                  var query = window.location.search.substring(1);
+                  var vars = query.split('&');
+                  for (var i = 0; i < vars.length; i++) {
+                        var pair = vars[i].split('=');
+                        if (decodeURIComponent(pair[0]) == variable) {
+                              return pair[1];
+                        }
+                  }
+            }
+
+            ready(function () {
+                  var path = getQueryVariable('path');
+                  var protocol = getQueryVariable('protocol');
+                  if (path && protocol) {
+                        var ele = document.getElementById('player');
+                        ele.src = path + '.' + protocol;
+                        var player = new MediaElementPlayer('player', {
+                              features: ['playpause', 'gesture', 'current', 'progress', 'duration', 'spacer', 'cutter', 'pip', 'thumbnailseek', 'tracks', 'speed', 'volume', 'toggle', 'fullscreen'],
+                              renderers: ['vod', 'html5'],
+                              clickToPlayPause: false,
+                              timeAndDurationSeparator: '<span> / <\/span>',
+                              success: function (mediaElement2, domObject, instance) {
+                                    while (ele.children.length) {
+                                          ele.removeChild(ele.firstElementChild);
+                                    }
+                                    const track = document.createElement('track');
+                                    track.kind = 'subtitles';
+                                    track.label = 'Subtitle';
+                                    track.src = '/sub/' + path;
+                                    track.srclang = '';
+                                    ele.appendChild(track);
+                                    instance.rebuildtracks();
+                                    mediaElement2.play();
+                              },
+                              error: function (mediaeElement, err) {
+                                    console.log('Error loading media element');
+                              },
+                              thumbnailCmd: function (sec) {
+                                    return '/thumb/' + path + '/' + sec;
+                              },
+                              cutterCmd: function (start, stop) {
+                                    return '/cutter/' + path + '/' + start + '/' + stop;
+                              }
                         });
-                }
-
-                function getQueryVariable(variable) {
-                        var query = window.location.search.substring(1);
-                        var vars = query.split('&');
-                        for (var i = 0; i < vars.length; i++) {
-                                var pair = vars[i].split('=');
-                                if (decodeURIComponent(pair[0]) == variable) {
-                                        return pair[1];
-                                }
-                        }
-                }
-
-                ready(function(){
-                        var path = getQueryVariable('path');
-                        var protocol = getQueryVariable('protocol');
-                        if (path && protocol) {
-                                var ele = document.getElementById('player');
-                                ele.src = path+'.'+protocol;
-                                var player = new MediaElementPlayer('player', {
-                                        features: ['playpause', 'gesture', 'current', 'progress', 'duration', 'spacer', 'cutter', 'pip', 'thumbnailseek', 'tracks', 'speed', 'volume', 'toggle', 'fullscreen'],
-                                        renderers: ['vod', 'html5'],
-                                        clickToPlayPause: false,
-                                        timeAndDurationSeparator: '<span> / <\/span>',
-                                        success: function(mediaElement2, domObject, instance) {
-                                                while(ele.children.length) {
-                                                        ele.removeChild(ele.firstElementChild);
-                                                }
-                                                domObject.thumbnail = function(sec) {
-                                                        return '/thumb/' + path + '/' + sec;
-                                                }
-                                                const track = document.createElement('track');
-                                                track.kind = 'subtitles';
-                                                track.label = 'Subtitle';
-                                                track.src = '/sub/' + path;
-                                                track.srclang = '';
-                                                ele.appendChild(track);
-                                                instance.rebuildtracks();
-                                                mediaElement2.play();
-                                        },
-                                        error: function (mediaeElement, err) {
-                                                console.log('Error loading media element');
-                                        },
-                                        cutterCmd:function(start, stop) {
-                                                return '/cutter/' + path + '/' + start + '/' + stop;
-                                        }
-                                });
-                        }
-                });
-  </script>
+                  }
+            });
+      </script>
 </body>
+
 </html>

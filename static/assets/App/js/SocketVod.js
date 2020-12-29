@@ -68,6 +68,11 @@ Class('App.SocketVod', 'xui.Com',{
 						"caption": "Delete",
 						"tips" : "Delete Current Directory",
 						"image" : "@xui_ini.appPath@image\/delete.png"
+					}, {
+						"id" : "refresh",
+						"caption": "Refresh",
+						"tips" : "Refresh",
+						"image" : "@xui_ini.appPath@image\/refresh.png"
 					}],
 					"caption" : "grp0"
 				},{
@@ -322,7 +327,7 @@ Class('App.SocketVod', 'xui.Com',{
 				id:"del",
 				caption:"Delete"
 			});
-			
+
 			if(item.type!="directory"){
 				items.push({
 					id:"raw",
@@ -455,6 +460,9 @@ Class('App.SocketVod', 'xui.Com',{
 							tree.free();
 						},null,{method:'post'});
 					});
+					break;
+				case "refresh":
+					ns.loadPath(ns._cwd);
 					break;
 				case "prev":
 					if(ns._prev){
